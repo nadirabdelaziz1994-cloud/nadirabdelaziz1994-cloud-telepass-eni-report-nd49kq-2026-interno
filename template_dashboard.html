@@ -137,23 +137,23 @@ td.num, th.num{text-align:right}
     <div class="quick-grid">
       <div class="card quick-card">
         <div><h3>Tutti i punti vendita</h3><div class="count" id="countAll">0</div></div>
-        <button class="btn big-action" onclick="setPreset('all')">CLICCA QUI</button>
+        <button class="btn big-action" onclick="setPreset('all')">CLICCA QUI · APRI ELENCO</button>
       </div>
       <div class="card quick-card">
         <div><h3>PDV da seguire</h3><div class="count" id="countFollow">0</div></div>
-        <button class="btn big-action" onclick="setPreset('follow')">CLICCA QUI</button>
+        <button class="btn big-action" onclick="setPreset('follow')">CLICCA QUI · APRI ELENCO</button>
       </div>
       <div class="card quick-card">
         <div><h3>Vendite 2026 sotto il 2025</h3><div class="count" id="countSalesBelow">0</div></div>
-        <button class="btn big-action" onclick="setPreset('salesBelow')">CLICCA QUI</button>
+        <button class="btn big-action" onclick="setPreset('salesBelow')">CLICCA QUI · APRI ELENCO</button>
       </div>
       <div class="card quick-card">
         <div><h3>Assistenze 2026 sotto il 2025</h3><div class="count" id="countAssistBelow">0</div></div>
-        <button class="btn big-action" onclick="setPreset('assistBelow')">CLICCA QUI</button>
+        <button class="btn big-action" onclick="setPreset('assistBelow')">CLICCA QUI · APRI ELENCO</button>
       </div>
       <div class="card quick-card">
         <div><h3>PDV in calo ultime settimane</h3><div class="count" id="countDecline">0</div></div>
-        <button class="btn big-action" onclick="setPreset('decline')">CLICCA QUI</button>
+        <button class="btn big-action" onclick="setPreset('decline')">CLICCA QUI · APRI ELENCO</button>
       </div>
     </div>
     <div class="alert" style="margin-top:14px" id="quickText"></div>
@@ -167,7 +167,7 @@ td.num, th.num{text-align:right}
           <th></th><th class="num">#</th><th>PDV</th><th>Città</th><th>Agente</th><th>CR</th><th>RZV</th>
           <th class="num">Vend 2026</th><th class="num">Vend 2025</th><th class="num">Prospect</th><th class="num">Twin</th><th class="num">Business</th>
           <th class="num">Ass 2026</th><th class="num">Ass 2025</th><th class="num">Sost anno</th><th class="num">UP EU anno</th>
-          <th class="num">% Ass.</th><th class="num">% UP EU</th><th>Stato</th>
+          <th class="num">% Ass.</th><th class="num">% UP EU</th><th class="num">W__CURRENT_WEEK__ vend.</th><th class="num">W__CURRENT_WEEK__ prosp.</th><th class="num">W__CURRENT_WEEK__ ass.</th><th>Stato</th>
         </tr></thead>
         <tbody></tbody>
       </table>
@@ -299,20 +299,7 @@ function showPage(page, btn){
 function renderGare(targetId, items, emptyText){
   const wrap=document.getElementById(targetId);
   if(!items || !items.length){ wrap.innerHTML = `<div class="empty">${emptyText}</div>`; return; }
-  wrap.innerHTML = items.map(g => {
-    const meta = [];
-    if(g.updated_at) meta.push(`Aggiornato al ${escapeHtml(g.updated_at)}`);
-    if(g.file_name) meta.push(escapeHtml(g.file_name));
-    const listHtml = (g.items||[]).length ? `<ul>${(g.items||[]).map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul>` : '';
-    const tableHtml = (g.table && g.table.length) ? `
-      <div class="list-wrap" style="margin-top:12px">
-        <table style="min-width:920px">
-          <thead><tr><th class="num">#</th><th>PDV</th><th>Città</th><th>Agente</th><th>CR</th><th>RZV</th><th class="num">Vendite gara</th></tr></thead>
-          <tbody>${g.table.map(r=>`<tr><td class="num">${fmtNum(r.rank)}</td><td><b>${escapeHtml(r.pdv)}</b></td><td>${escapeHtml(r.city||'')}</td><td>${escapeHtml(r.agent||'')}</td><td>${escapeHtml(r.cr||'')}</td><td>${escapeHtml(r.rzv||'')}</td><td class="num"><b>${fmtNum(r.sales)}</b></td></tr>`).join('')}</tbody>
-        </table>
-      </div>` : '';
-    return `<div class="card"><h3>${escapeHtml(g.title)}</h3>${meta.length?`<div class="muted" style="margin:6px 0 10px 0">${meta.join(' · ')}</div>`:''}${listHtml}${tableHtml}</div>`;
-  }).join('');
+  wrap.innerHTML = items.map(g => `<div class="card"><h3>${escapeHtml(g.title)}</h3><ul>${(g.items||[]).map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul></div>`).join('');
 }
 function renderFiles(){
   const wrap=document.getElementById('fileUtiliWrap');
@@ -359,10 +346,13 @@ function renderList(){
       <td class="num">${fmtNum(r.ytd.up_eu)}</td>
       <td class="num">${fmtPct(r.ytd.attach_rate)}</td>
       <td class="num">${fmtPct(r.ytd.up_eu_rate)}</td>
+      <td class="num">${fmtNum(r.latest.sales_total)}</td>
+      <td class="num">${fmtNum(r.latest.prospect)}</td>
+      <td class="num">${fmtNum(r.latest.assist)}</td>
       <td>${badge(r.status)}</td>
     </tr>`).join('');
   if(!rows.length){
-    tbody.innerHTML = `<tr><td colspan="19">Nessun PDV con i filtri scelti.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="22">Nessun PDV con i filtri scelti.</td></tr>`;
   }
 }
 function miniRecentBlock(rows, key, label){
@@ -502,39 +492,13 @@ function exportKey(){
   if(rzv) return `rzv::${rzv}`;
   return 'all';
 }
-function downloadCurrentRowsAsExcel(){
-  const rows=currentRows.length ? currentRows : withPreset(getBaseRows());
-  const title = presetTitle();
-  const html = `
-  <html xmlns:o="urn:schemas-microsoft-com:office:office"
-        xmlns:x="urn:schemas-microsoft-com:office:excel"
-        xmlns="http://www.w3.org/TR/REC-html40">
-    <head><meta charset="utf-8"></head>
-    <body>
-      <table border="1">
-        <tr><th>PDV</th><th>Città</th><th>Agente</th><th>CR</th><th>RZV</th><th>Vend 2026</th><th>Vend 2025</th><th>Prospect</th><th>Twin</th><th>Business</th><th>Ass 2026</th><th>Ass 2025</th><th>Sost anno</th><th>UP EU anno</th><th>% Ass.</th><th>% UP EU</th><th>Stato</th></tr>
-        ${rows.map(r=>`<tr>
-          <td>${escapeHtml(r.pdv)}</td><td>${escapeHtml(r.city)}</td><td>${escapeHtml(r.agent)}</td><td>${escapeHtml(r.cr)}</td><td>${escapeHtml(r.rzv)}</td>
-          <td>${fmtNum(r.ytd.sales_2026)}</td><td>${fmtNum(r.ytd.sales_2025)}</td><td>${fmtNum(r.ytd.prospect)}</td><td>${fmtNum(r.ytd.twin)}</td><td>${fmtNum(r.ytd.business)}</td>
-          <td>${fmtNum(r.ytd.assist_2026)}</td><td>${fmtNum(r.ytd.assist_2025)}</td><td>${fmtNum(r.ytd.sost_family)}</td><td>${fmtNum(r.ytd.up_eu)}</td><td>${fmtPct(r.ytd.attach_rate)}</td><td>${fmtPct(r.ytd.up_eu_rate)}</td><td>${escapeHtml(r.status)}</td>
-        </tr>`).join('')}
-      </table>
-    </body>
-  </html>`;
-  const blob = new Blob([html], {type:'application/vnd.ms-excel'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `${title.replace(/[^a-z0-9]+/gi,'_')}.xls`;
-  a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
-}
 function openExcelReport(){
   const key=exportKey();
-  if(key && EXPORTS[key]){
-    window.open(EXPORTS[key].path, '_blank');
+  if(!key || !EXPORTS[key]){
+    alert('Per aprire l’Excel pronto usa filtri semplici: Tutti i punti vendita, solo Agente, solo CR, solo RZV oppure Agente + CR. Togli ricerca testuale, stato e pulsanti rapidi.');
     return;
   }
-  downloadCurrentRowsAsExcel();
+  window.open(EXPORTS[key].path, '_blank');
 }
 function pdfCard(r){
   return `<div style="border:1px solid #d7dfeb;border-radius:16px;padding:14px 16px;margin-bottom:12px;page-break-inside:avoid;background:#fff">
@@ -556,74 +520,32 @@ function pdfCard(r){
 }
 function openPdfReport(){
   const rows=currentRows.length ? currentRows : withPreset(getBaseRows());
+  if(rows.length > 80){
+    alert('Per il PDF conviene filtrare prima. Con più di 80 PDV il file diventa troppo lungo per WhatsApp.');
+    return;
+  }
   const win=window.open('', '_blank');
   const title=`Report Telepass ENI · ${presetTitle()} · ${rows.length} PDV`;
-  const useTable = rows.length > 80;
-  const cardsOrTable = useTable
-    ? `<table style="width:100%;border-collapse:collapse;font-size:11px">
-        <thead><tr>
-          <th style="text-align:left;border-bottom:1px solid #cfd9e8;padding:6px">PDV</th>
-          <th style="text-align:left;border-bottom:1px solid #cfd9e8;padding:6px">Città</th>
-          <th style="text-align:left;border-bottom:1px solid #cfd9e8;padding:6px">Agente</th>
-          <th style="text-align:right;border-bottom:1px solid #cfd9e8;padding:6px">Vend 2026</th>
-          <th style="text-align:right;border-bottom:1px solid #cfd9e8;padding:6px">Vend 2025</th>
-          <th style="text-align:right;border-bottom:1px solid #cfd9e8;padding:6px">Ass 2026</th>
-          <th style="text-align:right;border-bottom:1px solid #cfd9e8;padding:6px">Ass 2025</th>
-          <th style="text-align:right;border-bottom:1px solid #cfd9e8;padding:6px">Prospect</th>
-          <th style="text-align:right;border-bottom:1px solid #cfd9e8;padding:6px">Sost</th>
-          <th style="text-align:right;border-bottom:1px solid #cfd9e8;padding:6px">UP EU</th>
-          <th style="text-align:left;border-bottom:1px solid #cfd9e8;padding:6px">Stato</th>
-        </tr></thead>
-        <tbody>
-          ${rows.map(r=>`<tr>
-            <td style="padding:5px;border-bottom:1px solid #edf2f8">${escapeHtml(r.pdv)}</td>
-            <td style="padding:5px;border-bottom:1px solid #edf2f8">${escapeHtml(r.city)}</td>
-            <td style="padding:5px;border-bottom:1px solid #edf2f8">${escapeHtml(r.agent)}</td>
-            <td style="padding:5px;border-bottom:1px solid #edf2f8;text-align:right">${fmtNum(r.ytd.sales_2026)}</td>
-            <td style="padding:5px;border-bottom:1px solid #edf2f8;text-align:right">${fmtNum(r.ytd.sales_2025)}</td>
-            <td style="padding:5px;border-bottom:1px solid #edf2f8;text-align:right">${fmtNum(r.ytd.assist_2026)}</td>
-            <td style="padding:5px;border-bottom:1px solid #edf2f8;text-align:right">${fmtNum(r.ytd.assist_2025)}</td>
-            <td style="padding:5px;border-bottom:1px solid #edf2f8;text-align:right">${fmtNum(r.ytd.prospect)}</td>
-            <td style="padding:5px;border-bottom:1px solid #edf2f8;text-align:right">${fmtNum(r.ytd.sost_family)}</td>
-            <td style="padding:5px;border-bottom:1px solid #edf2f8;text-align:right">${fmtNum(r.ytd.up_eu)}</td>
-            <td style="padding:5px;border-bottom:1px solid #edf2f8">${escapeHtml(r.status)}</td>
-          </tr>`).join('')}
-        </tbody>
-      </table>`
-    : rows.map(pdfCard).join('');
-  const pageSize = useTable ? 'A4 landscape' : 'A4 portrait';
   const html=`<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>
     body{font-family:system-ui,Arial,sans-serif;background:#fff;color:#10243e;padding:20px}
     h1{font-size:24px;margin:0 0 6px 0} .muted{color:#5d6b82}
     .badge{display:inline-block;border-radius:999px;padding:6px 10px;font-weight:800;font-size:12px}
     .bene{background:#e8f7ec;color:#138a36}.da-seguire{background:#fff4e5;color:#b4690e}.male{background:#fdeceb;color:#c62828}
-    @page{size:${pageSize};margin:10mm}
+    @page{size:A4 portrait;margin:12mm}
   </style></head><body>
     <h1>${escapeHtml(title)}</h1>
     <div class="muted">Settimana attuale W${String(APP.meta.current_week).padStart(2,'0')} · Generato il ${escapeHtml(APP.meta.generated_at)}</div>
     <div style="margin:14px 0 18px 0"><b>Filtro:</b> ${escapeHtml(document.getElementById('agentFilter').value || 'Tutti gli agenti')} ${document.getElementById('crFilter').value ? '· CR: '+escapeHtml(document.getElementById('crFilter').value) : ''} ${document.getElementById('rzvFilter').value ? '· RZV: '+escapeHtml(document.getElementById('rzvFilter').value) : ''}</div>
-    ${cardsOrTable}
+    ${rows.map(pdfCard).join('')}
   </body></html>`;
   win.document.write(html);
   win.document.close();
 }
-
 function refreshAll(){
   document.getElementById('agentFilter').dataset.current = document.getElementById('agentFilter').value;
   document.getElementById('crFilter').dataset.current = document.getElementById('crFilter').value;
   document.getElementById('rzvFilter').dataset.current = document.getElementById('rzvFilter').value;
   renderHome(); renderList();
-  const hasFilter = Boolean(
-    (document.getElementById('searchText').value || '').trim() ||
-    document.getElementById('agentFilter').value ||
-    document.getElementById('crFilter').value ||
-    document.getElementById('rzvFilter').value ||
-    document.getElementById('statusFilter').value ||
-    currentPreset !== 'all'
-  );
-  if(hasFilter){
-    showPage('classifica');
-  }
 }
 function init(){
   fillSelect('agentFilter', uniqueSorted('agent'), 'Tutti gli agenti');
